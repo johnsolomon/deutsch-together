@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Deutsch Together</title>
+<style>
+  :root{
+    --bg:#0f1115;--panel:#171a21;--panel-2:#1e222b;--line:#2a2f3a;
+    --text:#e8eaed;--muted:#9aa0ac;
+    --me:#2563eb;--them:#2a2f3a;--en:#9aa0ac;
+    --accent:#3ba776;--reveal:#2e6b4f;--warn:#e0a84e;--new:#c08cf0;--err:#e06c6c;--gram:#5aa7e0;
+    --radius:16px;font-size:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none;}
+  #app{display:flex;flex-direction:column;height:100dvh;max-width:680px;margin:0 auto;}
+
+  #picker{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center;}
+  #picker h1{font-size:1.5rem;margin:0;font-weight:650;}
+  #picker p{color:var(--muted);margin:0 0 6px;font-size:.92rem;max-width:310px;line-height:1.5;}
+  .who-btn{width:240px;max-width:80vw;padding:16px;border-radius:var(--radius);border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:1.05rem;font-weight:600;cursor:pointer;transition:all .15s;}
+  .who-btn:active{transform:scale(.97);}
+  .who-btn.john{border-color:var(--me);}.who-btn.friend{border-color:var(--accent);}
+
+  header{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:10;}
+  header .title{font-weight:650;font-size:1.02rem;flex:1;}
+  header .title small{display:block;color:var(--muted);font-weight:400;font-size:.7rem;margin-top:1px;}
+  .stat{font-size:.68rem;color:var(--muted);text-align:right;line-height:1.3;cursor:pointer;}
+  .stat b{color:var(--accent);}
+  .me-chip{font-size:.7rem;color:var(--muted);padding:5px 9px;border:1px solid var(--line);border-radius:20px;cursor:pointer;white-space:nowrap;}
+
+  .tabbar{display:flex;background:var(--panel);border-bottom:1px solid var(--line);}
+  .tabbar button{flex:1;border:none;background:transparent;color:var(--muted);padding:9px 4px;font-size:.8rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;}
+  .tabbar button.active{color:var(--text);border-bottom-color:var(--me);}
+  .tabbar .badge{display:inline-block;min-width:16px;padding:0 4px;margin-left:4px;font-size:.64rem;background:var(--warn);color:#1a1205;border-radius:9px;font-weight:700;}
+
+  #thread{flex:1;overflow-y:auto;padding:14px 12px 8px;display:flex;flex-direction:column;gap:6px;}
+  .day-sep{text-align:center;color:var(--muted);font-size:.72rem;margin:8px 0;}
+  .msg-row{display:flex;flex-direction:column;margin-bottom:6px;max-width:88%;}
+  .msg-row.me{align-self:flex-end;align-items:flex-end;}
+  .msg-row.them{align-self:flex-start;align-items:flex-start;}
+  .sender{font-size:.7rem;color:var(--muted);margin:0 6px 3px;}
+  .bubble{padding:10px 13px;border-radius:var(--radius);position:relative;}
+  .me .bubble{background:var(--me);color:#fff;border-bottom-right-radius:5px;}
+  .them .bubble{background:var(--them);color:var(--text);border-bottom-left-radius:5px;}
+  .de-line{font-size:1.06rem;line-height:1.7;}
+  .w{cursor:pointer;border-radius:4px;padding:0 2px;transition:background .12s;}
+  .them .w:active,.them .w.lit{background:rgba(59,167,118,.28);}
+  .me .w:active,.me .w.lit{background:rgba(255,255,255,.22);}
+  .w.new{border-bottom:2px dotted var(--new);}
+  .w.shaky{border-bottom:2px solid var(--warn);}
+  .gloss{display:inline-block;font-size:.72rem;color:var(--accent);margin-left:3px;font-style:italic;}
+  .me .gloss{color:#cfe0ff;}
+
+  .reveal-row{margin-top:8px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .reveal-btn,.hear-btn{font-size:.74rem;padding:4px 11px;border-radius:14px;cursor:pointer;border:1px solid var(--reveal);background:transparent;color:var(--accent);font-weight:600;}
+  .me .reveal-btn,.me .hear-btn{border-color:rgba(255,255,255,.4);color:#cfe0ff;}
+  .reveal-btn:active,.hear-btn:active{transform:scale(.95);}
+  .en-text{display:none;width:100%;margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.12);font-size:.92rem;color:var(--en);line-height:1.45;}
+  .me .en-text{border-top-color:rgba(255,255,255,.2);color:#d8e2f5;}
+  .en-text.show{display:block;}
+  .pattern-tag{display:inline-block;font-size:.64rem;color:var(--gram);border:1px solid var(--gram);border-radius:10px;padding:1px 7px;cursor:pointer;margin-top:6px;}
+
+  .mini{display:flex;gap:6px;margin:3px 6px 0;align-items:center;flex-wrap:wrap;}
+  .mini button{font-size:.7rem;padding:2px 9px;border-radius:12px;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);}
+  .mini button:active{transform:scale(.95);}
+  .mini .time{font-size:.66rem;color:var(--muted);margin-left:2px;}
+  .new-chip{font-size:.64rem;color:var(--new);border:1px solid var(--new);border-radius:10px;padding:1px 7px;}
+
+  .fix-banner{align-self:flex-end;max-width:88%;background:rgba(224,108,108,.1);border:1px solid var(--err);border-radius:12px;padding:8px 11px;font-size:.82rem;margin:2px 0 8px;line-height:1.4;}
+  .fix-banner b{color:var(--err);}.fix-banner .good{color:var(--accent);font-weight:600;}
+
+  .msg-row.bot{align-self:stretch;max-width:100%;}
+  .bot-card{background:#1a2b22;border:1px solid var(--reveal);border-radius:var(--radius);padding:12px 14px;font-size:.95rem;line-height:1.5;white-space:pre-wrap;}
+  .bot-card.gram{background:#16222e;border-color:var(--gram);}
+  .bot-card .bot-head{display:flex;align-items:center;gap:7px;font-weight:650;font-size:.8rem;margin-bottom:6px;color:var(--accent);}
+  .bot-card.gram .bot-head{color:var(--gram);}
+  .bot-card .dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+
+  #composer{border-top:1px solid var(--line);background:var(--panel);padding:8px 12px calc(10px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:7px;}
+  .starters{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;}
+  .starters button{white-space:nowrap;font-size:.74rem;padding:5px 11px;border-radius:14px;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);flex-shrink:0;}
+  .input-row{display:flex;gap:8px;align-items:flex-end;}
+  .lang-toggle{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden;flex-shrink:0;}
+  .lang-toggle button{border:none;background:var(--panel-2);color:var(--muted);font-size:.72rem;font-weight:700;padding:6px 10px;cursor:pointer;width:46px;}
+  .lang-toggle button.active{background:var(--me);color:#fff;}
+  #input{flex:1;resize:none;border:1px solid var(--line);background:var(--panel-2);color:var(--text);border-radius:18px;padding:10px 14px;font-size:1.0rem;font-family:inherit;line-height:1.4;max-height:120px;min-height:44px;}
+  #input:focus{outline:none;border-color:var(--me);}
+  #send{width:44px;height:44px;border-radius:50%;border:none;background:var(--me);color:#fff;font-size:1.1rem;cursor:pointer;flex-shrink:0;display:grid;place-items:center;}
+  #send:active{transform:scale(.92);}#send:disabled{opacity:.4;}
+  .legend{font-size:.66rem;color:var(--muted);text-align:center;padding:3px;}
+  .legend .n{border-bottom:2px dotted var(--new);}.legend .s{border-bottom:2px solid var(--warn);}
+
+  .speedbar{display:flex;align-items:center;gap:7px;font-size:.68rem;color:var(--muted);justify-content:center;}
+  .speedbar .seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .speedbar .seg button{border:none;background:var(--panel-2);color:var(--muted);font-size:.68rem;padding:3px 9px;cursor:pointer;}
+  .speedbar .seg button.active{background:var(--accent);color:#06130d;font-weight:700;}
+
+  .panel{flex:1;overflow-y:auto;padding:16px 14px;display:none;}
+  .panel.show{display:block;}
+  .ph{margin-bottom:12px;}.ph h2{margin:0 0 3px;font-size:1.12rem;}.ph p{margin:0;color:var(--muted);font-size:.84rem;line-height:1.45;}
+  .seg-filter{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;}
+  .seg-filter button{font-size:.76rem;padding:5px 12px;border-radius:16px;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);}
+  .seg-filter button.active{background:var(--me);border-color:var(--me);color:#fff;}
+  .rev-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 16px;text-align:center;margin-bottom:12px;}
+  .rev-card .sub{font-size:.76rem;color:var(--muted);margin-bottom:12px;}
+  .rev-card .prompt{font-size:1.4rem;font-weight:650;margin-bottom:4px;}
+  .rev-card .prompt.small{font-size:1.05rem;line-height:1.4;}
+  .rev-card .ans{display:none;font-size:1.05rem;color:var(--accent);font-weight:600;margin:10px 0 14px;line-height:1.4;}
+  .rev-card .ans.show{display:block;}
+  .rev-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+  .rev-actions button{font-size:.82rem;padding:8px 16px;border-radius:12px;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-weight:600;}
+  .rev-actions .got{border-color:var(--reveal);color:var(--accent);}
+  .rev-actions .miss{border-color:var(--err);color:var(--err);}
+  .rev-actions .show-btn{border-color:var(--me);color:#cfe0ff;}
+  .empty{text-align:center;color:var(--muted);padding:36px 20px;font-size:.9rem;line-height:1.6;}
+  .wordlist{margin-top:18px;}.wordlist h3{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px;}
+  .word-pill{display:inline-flex;align-items:center;gap:6px;font-size:.84rem;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px 10px;margin:0 6px 6px 0;}
+  .word-pill .de{font-weight:600;}.word-pill .en{color:var(--muted);font-size:.78rem;}
+  .word-pill.shaky{border-color:var(--warn);}.word-pill.gram{border-color:var(--gram);}
+
+  .gram-search{width:100%;border:1px solid var(--line);background:var(--panel-2);color:var(--text);border-radius:12px;padding:10px 13px;font-size:.95rem;margin-bottom:12px;}
+  .gram-search:focus{outline:none;border-color:var(--gram);}
+  .gram-item{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden;}
+  .gram-item .gq{padding:12px 14px;font-weight:600;font-size:.95rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+  .gram-item .gq .chev{color:var(--muted);transition:transform .2s;}
+  .gram-item.open .gq .chev{transform:rotate(90deg);}
+  .gram-item .ga{display:none;padding:0 14px 14px;font-size:.9rem;line-height:1.55;}
+  .gram-item.open .ga{display:block;}
+  .gram-item .ga .ex{background:var(--panel-2);border-radius:8px;padding:8px 10px;margin:7px 0;font-size:.88rem;}
+  .gram-item .ga .ex .de{color:var(--gram);font-weight:600;}
+  .gram-item .ga .ex .en{color:var(--muted);font-size:.82rem;display:block;margin-top:2px;}
+  .gram-item .cat{font-size:.64rem;color:var(--gram);text-transform:uppercase;letter-spacing:.04em;}
+
+  .typing span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);animation:blink 1.2s infinite;margin:0 1px;}
+  .typing span:nth-child(2){animation-delay:.2s;}.typing span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,60%,100%{opacity:.3}30%{opacity:1}}
+  #conn{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:60;font-size:.74rem;padding:5px 12px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);display:none;}
+  #conn.show{display:block;}
+  #conn.err{border-color:var(--err);color:var(--err);}
+</style>
+</head>
+<body>
+<div id="conn"></div>
+
+<div id="picker">
+  <h1>Deutsch Together 🇩🇪</h1>
+  <p>Read German, reveal what's stuck, hear it. The app remembers your weak spots and brings them back. Who's here?</p>
+  <button class="who-btn john" data-who="John">I'm John</button>
+  <button class="who-btn friend" data-who="Murilo">I'm Murilo</button>
+</div>
+
+<div id="app" style="visibility:hidden">
+  <header>
+    <div class="title">Deutsch Together <small id="sub">with Murilo</small></div>
+    <div class="stat" id="stat" onclick="showTab('review')"></div>
+    <div class="me-chip" id="meChip" onclick="switchWho()">John ⇄</div>
+  </header>
+  <div class="tabbar">
+    <button id="tab-chat" class="active" onclick="showTab('chat')">Chat</button>
+    <button id="tab-review" onclick="showTab('review')">Review <span class="badge" id="revBadge" style="display:none">0</span></button>
+    <button id="tab-gram" onclick="showTab('gram')">Grammar</button>
+  </div>
+
+  <div id="thread"></div>
+
+  <div id="review" class="panel">
+    <div class="ph"><h2>Quick recall</h2><p>Your shaky words and grammar patterns, brought back for a fast pass. A nudge, not a course.</p></div>
+    <div class="seg-filter">
+      <button class="active" data-f="all" onclick="setRevFilter('all')">All</button>
+      <button data-f="vocab" onclick="setRevFilter('vocab')">Words</button>
+      <button data-f="grammar" onclick="setRevFilter('grammar')">Grammar</button>
+    </div>
+    <div id="revArea"></div>
+  </div>
+
+  <div id="gram" class="panel">
+    <div class="ph"><h2>Grammar reference</h2><p>The essentials on demand. Tap a topic, or tap a pattern tag on any message.</p></div>
+    <input class="gram-search" id="gramSearch" placeholder="Search — 'dative', 'word order', 'der die das'…" oninput="renderGram()">
+    <div id="gramList"></div>
+  </div>
+
+  <div id="composer">
+    <div class="starters" id="starters"></div>
+    <div class="input-row">
+      <div class="lang-toggle">
+        <button id="lang-de" class="active" onclick="setLang('de')">DE</button>
+        <button id="lang-en" onclick="setLang('en')">EN</button>
+      </div>
+      <textarea id="input" rows="1" placeholder="Type German…"></textarea>
+      <button id="send" onclick="handleSend()">↑</button>
+    </div>
+    <div class="speedbar">🔊 speed
+      <span class="seg">
+        <button data-s="0.6" onclick="setSpeed(0.6)">slow</button>
+        <button data-s="0.85" class="active" onclick="setSpeed(0.85)">normal</button>
+        <button data-s="1" onclick="setSpeed(1)">full</button>
+      </span>
+    </div>
+    <div class="legend"><span class="n">&nbsp;new&nbsp;</span> · <span class="s">&nbsp;shaky&nbsp;</span> · tap a word for meaning · tap a <span style="color:var(--gram)">pattern</span> to learn it</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// ======== CONFIG ========
+const SUPABASE_URL = "https://taiqxxehyfkpgjaiygls.supabase.co";
+const SUPABASE_KEY = "sb_publishable_HemjsBxnRbCFfDPTZK5K0A_h1jvkgWi";
+const FN = SUPABASE_URL + "/functions/v1/bot";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ======== STATE ========
+let me = localStorage.getItem("dt_me") || null;
+const other = () => me === "John" ? "Murilo" : "John";
+let typingLang="de", speed=0.85, revFilter="all";
+let messages = [];           // from DB
+let memory = { vocab:{}, gram:{} };  // current user's memory, from DB
+
+// ======== GRAMMAR DATA ========
+const GRAMMAR=[
+  {id:"der-die-das",cat:"nouns",q:"der / die / das — noun gender",a:"Every German noun is masculine (der), feminine (die), or neuter (das). There's no full rule — you learn gender WITH the word. Plurals all use die.",ex:[["der Tisch","the table (m)"],["die Lampe","the lamp (f)"],["das Buch","the book (n)"]]},
+  {id:"cases",cat:"cases",q:"The 4 cases (overview)",a:"German marks a word's job by changing the article. Nominative = subject. Accusative = direct object. Dative = indirect object. Genitive = possession. The noun usually stays; der/die/das changes.",ex:[["Der Mann sieht den Hund.","The man sees the dog."],["Ich gebe dem Kind das Buch.","I give the child the book."]]},
+  {id:"accusative",cat:"cases",q:"Accusative (direct object)",a:"The thing being acted on. Only masculine changes: der→den, ein→einen. Feminine/neuter/plural look like nominative.",ex:[["Ich habe einen Hund.","I have a dog."],["Ich sehe die Katze.","I see the cat."]]},
+  {id:"dative",cat:"cases",q:"Dative (to / for whom)",a:"The recipient. der→dem, die→der, das→dem, plural→den (+n). Triggered by verbs (helfen, danken) and prepositions (mit, zu, aus, bei, nach, von).",ex:[["Ich helfe dem Mann.","I help the man."],["Mit dem Auto.","By car."]]},
+  {id:"word-order",cat:"syntax",q:"Word order — verb second",a:"In a main clause the conjugated verb is ALWAYS the second element. Whatever comes first, the verb follows it and the subject flips behind.",ex:[["Ich gehe heute.","I go today."],["Heute gehe ich.","Today go I."]]},
+  {id:"time-place",cat:"syntax",q:"Time before place",a:"With both when and where, German puts TIME before PLACE (opposite of English).",ex:[["Ich fahre morgen nach Berlin.","I travel tomorrow to Berlin."]]},
+  {id:"verb-conj",cat:"verbs",q:"Present-tense verb endings",a:"Regular verbs: ich -e, du -st, er/sie/es -t, wir -en, ihr -t, sie/Sie -en.",ex:[["ich mache / du machst","I do / you do"],["wir machen / sie machen","we do / they do"]]},
+  {id:"sein-haben",cat:"verbs",q:"sein (to be) & haben (to have)",a:"Both irregular. sein: ich bin, du bist, er ist, wir sind, ihr seid, sie sind. haben: ich habe, du hast, er hat, wir haben, ihr habt, sie haben. Note: Germans say 'Ich habe Hunger' (I have hunger).",ex:[["Ich bin müde.","I am tired."],["Ich habe Zeit.","I have time."]]},
+  {id:"modal-end",cat:"verbs",q:"Modal verbs push the action to the end",a:"With möchte/kann/will/muss, the main verb goes to the very end as an infinitive.",ex:[["Ich möchte Deutsch lernen.","I want to learn German."],["Ich kann heute kommen.","I can come today."]]},
+  {id:"negation",cat:"basics",q:"nicht vs kein",a:"kein negates a noun with an indefinite/no article ('not a / no'). nicht negates everything else.",ex:[["Ich habe kein Auto.","I have no car."],["Ich verstehe das nicht.","I don't understand that."]]},
+  {id:"questions",cat:"basics",q:"Asking questions",a:"Yes/no: verb FIRST. W-questions: question word (wer, was, wo, wann, wie, warum) then verb.",ex:[["Hast du Zeit?","Do you have time?"],["Wo wohnst du?","Where do you live?"]]},
+  {id:"formal-you",cat:"basics",q:"du vs Sie",a:"du = informal (friends, family). Sie = formal/polite (strangers), capitalized, verb like 'they'. ihr = you-plural informal.",ex:[["Wie geht es dir?","How are you? (informal)"],["Wie geht es Ihnen?","How are you? (formal)"]]},
+];
+
+const STARTERS=[{en:"How are you today?"},{en:"What did you eat?"},{en:"I am tired."},{en:"Let's talk about work."},{en:"What time is it?"},{en:"See you tomorrow!"}];
+
+// ======== BACKEND HELPERS ========
+function showConn(msg, isErr){ const c=document.getElementById('conn'); c.textContent=msg; c.className='show'+(isErr?' err':''); }
+function hideConn(){ document.getElementById('conn').className=''; }
+
+async function callBot(payload){
+  const r = await fetch(FN, {
+    method:"POST",
+    headers:{ "Authorization":"Bearer "+SUPABASE_KEY, "apikey":SUPABASE_KEY, "Content-Type":"application/json" },
+    body: JSON.stringify(payload),
+  });
+  const j = await r.json();
+  if (!r.ok || j.error) throw new Error(j.error || ("status "+r.status));
+  return j;
+}
+
+const normWord = w => (w||"").toLowerCase().replace(/[.,!?;:«»"'()]/g,'').trim();
+
+// ---- word memory in DB ----
+async function loadMemory(){
+  memory = { vocab:{}, gram:{} };
+  const [{data:vw}, {data:gm}] = await Promise.all([
+    sb.from('dt_word_memory').select('*').eq('person', me),
+    sb.from('dt_grammar_memory').select('*').eq('person', me),
+  ]);
+  (vw||[]).forEach(r=>{ memory.vocab[r.word]={en:r.en,seen:r.seen,revealed:r.revealed,missed:r.missed,strength:r.strength}; });
+  (gm||[]).forEach(r=>{ memory.gram[r.pattern]={seen:r.seen,missed:r.missed,strength:r.strength}; });
+}
+async function bumpWord(word,en,{revealed=false,missed=false}={}){
+  const k=normWord(word); if(!k) return;
+  const cur = memory.vocab[k] || {en,seen:0,revealed:0,missed:0,strength:0};
+  cur.seen++; if(revealed)cur.revealed++; if(missed)cur.missed++;
+  if(en&&!cur.en)cur.en=en;
+  // strength heuristic
+  if(missed) cur.strength=Math.max(0,cur.strength-0.3);
+  else if(revealed) cur.strength=Math.min(5,cur.strength+0.6);
+  else cur.strength=Math.min(5,cur.strength+0.3);
+  memory.vocab[k]=cur;
+  await sb.from('dt_word_memory').upsert({ person:me, word:k, en:cur.en, seen:cur.seen, revealed:cur.revealed, missed:cur.missed, strength:cur.strength, updated_at:new Date().toISOString() }, { onConflict:'person,word' });
+  updateStat();
+}
+async function bumpGram(pattern,{missed=false}={}){
+  const cur = memory.gram[pattern] || {seen:0,missed:0,strength:0};
+  cur.seen++; if(missed){cur.missed++;cur.strength=Math.max(0,cur.strength-0.3);} else cur.strength=Math.min(5,cur.strength+0.5);
+  memory.gram[pattern]=cur;
+  await sb.from('dt_grammar_memory').upsert({ person:me, pattern, seen:cur.seen, missed:cur.missed, strength:cur.strength, updated_at:new Date().toISOString() }, { onConflict:'person,pattern' });
+  updateStat();
+}
+function wordState(w){ const m=memory.vocab[normWord(w)]; if(!m)return'new'; if(m.missed>0||m.strength<2)return (m.strength>=4?'known':'shaky'); return m.strength>=4?'known':'shaky'; }
+function wordStateFor(w){ const m=memory.vocab[normWord(w)]; if(!m)return'new'; if(m.strength>=4)return'known'; if(m.missed>0||m.revealed>=1||m.strength<4)return'shaky'; return'known'; }
+function shakyWords(){ return Object.entries(memory.vocab).filter(([k,v])=>v.strength<4&&(v.missed>0||v.revealed>=1)).map(([k,v])=>({de:k,en:v.en||'—'})); }
+function shakyGram(){ return Object.entries(memory.gram).filter(([k,v])=>v.strength<4&&v.seen>0).map(([k])=>GRAMMAR.find(g=>g.id===k)).filter(Boolean); }
+
+// ---- messages in DB ----
+async function loadMessages(){
+  const { data } = await sb.from('dt_messages').select('*').order('created_at',{ascending:true}).limit(500);
+  messages = data||[];
+  render();
+}
+async function insertMessage(row){
+  const { data, error } = await sb.from('dt_messages').insert(row).select().single();
+  if(error) throw error;
+  return data;
+}
+
+// realtime: new messages appear for both
+function subscribeRealtime(){
+  sb.channel('dt_thread')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'dt_messages'},(p)=>{
+      if(!messages.find(m=>m.id===p.new.id)){ messages.push(p.new); render(); }
+    })
+    .subscribe();
+}
+
+// ======== AUDIO ========
+function speak(text){try{const u=new SpeechSynthesisUtterance(text);u.lang='de-DE';u.rate=speed;speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
+function setSpeed(s){speed=s;document.querySelectorAll('.speedbar .seg button').forEach(b=>b.classList.toggle('active',+b.dataset.s===s));}
+
+// ======== RENDER ========
+const threadEl=document.getElementById('thread');
+function render(){
+  if(!me) return;
+  threadEl.innerHTML='';
+  if(messages.length===0){
+    const e=document.createElement('div');e.className='empty';e.innerHTML="No messages yet.<br>Type something below (English or German) to begin. Your friend sees it as German to decode.";
+    threadEl.appendChild(e);
+    updateStat();return;
+  }
+  const sep=document.createElement('div');sep.className='day-sep';sep.textContent='Conversation';threadEl.appendChild(sep);
+  messages.forEach(m=>{
+    if(m.kind==='tutor'||m.kind==='newword')return renderTutor(m);
+    if(m.kind==='fix')return renderFix(m);
+    renderMsg(m);
+  });
+  threadEl.scrollTop=threadEl.scrollHeight;updateStat();
+}
+
+function renderMsg(m){
+  const mine=m.sender===me;
+  const row=document.createElement('div');row.className='msg-row '+(mine?'me':'them');
+  if(!mine){const s=document.createElement('div');s.className='sender';s.textContent=m.sender;row.appendChild(s);}
+  const b=document.createElement('div');b.className='bubble';
+  const de=document.createElement('div');de.className='de-line';
+  const words = m.de_words||[];
+  let newCount=0;
+  words.forEach((pair,i)=>{
+    const word=pair[0], gloss=pair[1]||"";
+    const span=document.createElement('span');span.className='w';span.textContent=word;
+    if(!mine && gloss){const st=wordStateFor(word);if(st==='new'){span.classList.add('new');newCount++;}else if(st==='shaky')span.classList.add('shaky');}
+    if(gloss){span.onclick=()=>{
+      span.classList.toggle('lit');let g=span.querySelector('.gloss');
+      if(g)g.remove();else{const el=document.createElement('span');el.className='gloss';el.textContent=gloss;span.appendChild(el);if(!mine)bumpWord(word,gloss,{revealed:true});}
+    };}
+    de.appendChild(span);if(i<words.length-1)de.appendChild(document.createTextNode(' '));
+  });
+  b.appendChild(de);
+  const rr=document.createElement('div');rr.className='reveal-row';
+  const hb=document.createElement('button');hb.className='hear-btn';hb.textContent='🔊';hb.onclick=()=>speak(words.map(p=>p[0]).join(' '));
+  const rb=document.createElement('button');rb.className='reveal-btn';rb.textContent='Reveal English';
+  const en=document.createElement('div');en.className='en-text';en.textContent=m.en_text||'';
+  rb.onclick=()=>{en.classList.toggle('show');rb.textContent=en.classList.contains('show')?'Hide English':'Reveal English';};
+  rr.appendChild(hb);rr.appendChild(rb);rr.appendChild(en);b.appendChild(rr);
+  if(!mine&&m.pattern){const g=GRAMMAR.find(x=>x.id===m.pattern);if(g){const pt=document.createElement('div');pt.className='pattern-tag';pt.textContent='▸ '+g.q;pt.onclick=()=>{bumpGram(m.pattern);teachGram(m.pattern);};b.appendChild(pt);}}
+  row.appendChild(b);
+  const mini=document.createElement('div');mini.className='mini';
+  const ask=document.createElement('button');ask.textContent='? ask';ask.onclick=()=>askTutor(m);mini.appendChild(ask);
+  if(!mine&&newCount>0){const nc=document.createElement('span');nc.className='new-chip';nc.textContent=newCount+' new';mini.appendChild(nc);}
+  const t=document.createElement('span');t.className='time';t.textContent=fmtTime(m.created_at);mini.appendChild(t);
+  row.appendChild(mini);threadEl.appendChild(row);
+}
+function renderFix(m){const p=m.payload||{};const row=document.createElement('div');row.className='fix-banner';
+  if(m.sender!==me){ // only the sender sees their fix; others just see the corrected message already
+    return;
+  }
+  row.innerHTML=`<b>Quick fix (only you see this):</b> ${esc(p.wrong||'')} → <span class="good">${esc(p.right||'')}</span><br>${esc(p.why||'')}`;threadEl.appendChild(row);}
+function renderTutor(m){const p=m.payload||{};const isGram=m.kind==='tutor'&&p.gram;const row=document.createElement('div');row.className='msg-row bot';const card=document.createElement('div');card.className='bot-card'+(isGram?' gram':'');
+  let head=m.kind==='newword'?'New word':(isGram?'Grammar':'Tutor');
+  card.innerHTML=`<div class="bot-head"><span class="dot"></span>${head}</div><div>${p.html?p.html:esc(p.text||m.en_text||'')}</div>`;
+  if(m.kind==='newword'&&p.de){const hb=document.createElement('button');hb.className='hear-btn';hb.style.marginTop='8px';hb.textContent='🔊 '+p.de;hb.onclick=()=>speak(p.de);card.appendChild(hb);}
+  row.appendChild(card);threadEl.appendChild(row);}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmtTime(ts){try{const d=new Date(ts);return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');}catch(e){return'';}}
+
+function teachGram(id){
+  const g=GRAMMAR.find(x=>x.id===id);if(!g)return;
+  let html=esc(g.a);
+  if(g.ex)html+=g.ex.map(e=>`<div style="background:rgba(90,167,224,.1);border-radius:6px;padding:6px 8px;margin-top:6px"><span style="color:var(--gram);font-weight:600">${esc(e[0])}</span><br><span style="color:var(--muted);font-size:.85rem">${esc(e[1])}</span></div>`).join('');
+  insertMessage({ sender:'bot', kind:'tutor', payload:{gram:true, html} }).then(()=>showTab('chat'));
+}
+
+// ======== SEND ========
+let sending=false;
+async function handleSend(){
+  if(sending) return;
+  const inp=document.getElementById('input');const txt=inp.value.trim();if(!txt)return;
+  inp.value='';inp.style.height='auto';
+  sending=true; document.getElementById('send').disabled=true;
+  showTyping();
+  try{
+    // If user typed German, validate it first (private fix if wrong)
+    if(typingLang==='de'){
+      let v;
+      try{ v = await callBot({action:'validate', text:txt}); }catch(e){ v={ok:true}; }
+      if(v && v.ok===false && v.right){
+        removeTyping();
+        await insertMessage({ sender:me, kind:'fix', payload:{wrong:v.wrong||txt, right:v.right, why:v.why||''} });
+        // send the corrected version as the actual message
+        const tr = await callBot({action:'translate', text:v.right, from:'de'});
+        await insertMessage({ sender:me, kind:'msg', typed_lang:'de', de_words:tr.de, en_text:tr.en, pattern:tr.pattern||null });
+        return;
+      }
+    }
+    // translate missing direction + glosses
+    const tr = await callBot({action:'translate', text:txt, from:typingLang});
+    removeTyping();
+    await insertMessage({ sender:me, kind:'msg', typed_lang:typingLang, de_words:tr.de, en_text:tr.en, pattern:tr.pattern||null });
+  }catch(e){
+    removeTyping();
+    showConn("Bot busy — try again in a moment", true);
+    setTimeout(hideConn, 4000);
+    // fall back: store the raw text so the message isn't lost
+    if(typingLang==='en'){
+      await insertMessage({ sender:me, kind:'msg', typed_lang:'en', de_words:[[txt,'(translation pending)']], en_text:txt, pattern:null });
+    }else{
+      await insertMessage({ sender:me, kind:'msg', typed_lang:'de', de_words:txt.split(/\s+/).map(w=>[w,'·']), en_text:'(reveal pending)', pattern:null });
+    }
+  }finally{
+    sending=false; document.getElementById('send').disabled=false;
+  }
+}
+
+async function askTutor(m){
+  showTyping();
+  try{
+    const ctx = (m.de_words||[]).map(p=>p[0]).join(' ');
+    const r = await callBot({action:'tutor', question:"Explain this message for a beginner: why is it phrased this way?", context: ctx});
+    removeTyping();
+    await insertMessage({ sender:'bot', kind:'tutor', payload:{text:r.answer} });
+  }catch(e){ removeTyping(); showConn("Bot busy — try again", true); setTimeout(hideConn,3500); }
+}
+
+async function injectNewWord(){
+  showTyping();
+  try{
+    const known = Object.keys(memory.vocab).slice(0,180);
+    const r = await callBot({action:'newword', known});
+    removeTyping();
+    const ex = r.example||["",""];
+    const html=`New word for you both: <span style="color:var(--new);font-weight:600">${esc(r.de)}</span> — ${esc(r.en)}`
+      +`<div style="background:rgba(192,140,240,.1);border-radius:6px;padding:6px 8px;margin-top:6px"><span style="color:var(--new);font-weight:600">${esc(ex[0])}</span><br><span style="color:var(--muted);font-size:.85rem">${esc(ex[1])}</span></div>`
+      +`<div style="font-size:.78rem;color:var(--muted);margin-top:6px">Try using it in your next message.</div>`;
+    await insertMessage({ sender:'bot', kind:'newword', payload:{de:r.de, en:r.en, html} });
+  }catch(e){ removeTyping(); showConn("Bot busy — try again", true); setTimeout(hideConn,3500); }
+}
+
+function showTyping(){const row=document.createElement('div');row.className='msg-row bot';row.id='typingRow';
+  row.innerHTML=`<div class="bot-card"><div class="bot-head"><span class="dot"></span>Tutor</div><div class="typing"><span></span><span></span><span></span></div></div>`;
+  threadEl.appendChild(row);threadEl.scrollTop=threadEl.scrollHeight;}
+function removeTyping(){const t=document.getElementById('typingRow');if(t)t.remove();}
+
+// ======== REVIEW ========
+let revQueue=[],revIdx=0;
+function buildReview(){
+  const v=shakyWords().map(w=>({kind:'vocab',front:w.de,back:w.en}));
+  const g=shakyGram().map(x=>({kind:'grammar',front:x.q,back:x.a,id:x.id}));
+  revQueue = revFilter==='vocab'?v : revFilter==='grammar'?g : v.concat(g);
+  revIdx=0;
+}
+function renderReview(){
+  const area=document.getElementById('revArea');buildReview();
+  if(revQueue.length===0){area.innerHTML=`<div class="empty">Nothing here yet.<br>Reveal words and tap pattern tags in chat — the shaky ones collect here.</div>`;return;}
+  if(revIdx>=revQueue.length){area.innerHTML=`<div class="empty">Done — nice. 🎉<br>${revQueue.length} reviewed.</div>`+listsHTML();return;}
+  const c=revQueue[revIdx];
+  area.innerHTML=`
+    <div class="rev-card">
+      <div class="sub">${c.kind==='grammar'?'Recall this rule':'What does this mean?'} (${revIdx+1}/${revQueue.length})</div>
+      <div class="prompt ${c.kind==='grammar'?'small':''}">${esc(c.front)}</div>
+      <div class="ans ${c.kind==='grammar'?'small':''}" id="revAns">${esc(c.back)}</div>
+      <div class="rev-actions" id="revAct"><button class="show-btn" onclick="document.getElementById('revAns').classList.add('show');this.style.display='none';document.getElementById('revGrade').style.display='flex';">Show</button></div>
+      <div class="rev-actions" id="revGrade" style="display:none"><button class="miss" onclick="gradeRev(true)">Missed</button><button class="got" onclick="gradeRev(false)">Got it</button></div>
+    </div>`+listsHTML();
+}
+async function gradeRev(missed){const c=revQueue[revIdx];
+  if(c.kind==='vocab')await bumpWord(c.front,c.back,missed?{missed:true}:{revealed:false});
+  else await bumpGram(c.id,missed?{missed:true}:{});
+  revIdx++;renderReview();}
+function listsHTML(){
+  let h='';const sw=shakyWords(),sg=shakyGram();
+  if(sw.length&&revFilter!=='grammar')h+=`<div class="wordlist"><h3>Shaky words (${sw.length})</h3>`+sw.map(w=>`<span class="word-pill shaky"><span class="de">${esc(w.de)}</span><span class="en">${esc(w.en)}</span></span>`).join('')+`</div>`;
+  if(sg.length&&revFilter!=='vocab')h+=`<div class="wordlist"><h3>Grammar to revisit (${sg.length})</h3>`+sg.map(g=>`<span class="word-pill gram"><span class="de">${esc(g.q)}</span></span>`).join('')+`</div>`;
+  return h;
+}
+function setRevFilter(f){revFilter=f;document.querySelectorAll('.seg-filter button').forEach(b=>b.classList.toggle('active',b.dataset.f===f));renderReview();}
+
+// ======== GRAMMAR TAB ========
+function renderGram(){
+  const q=(document.getElementById('gramSearch').value||'').toLowerCase();
+  const list=document.getElementById('gramList');
+  const items=GRAMMAR.filter(g=>!q||g.q.toLowerCase().includes(q)||g.a.toLowerCase().includes(q)||g.cat.includes(q));
+  if(items.length===0){list.innerHTML=`<div class="empty">No match. Try "case", "verb", "order", "der".</div>`;return;}
+  list.innerHTML=items.map(g=>`
+    <div class="gram-item" id="gi-${g.id}">
+      <div class="gq" onclick="document.getElementById('gi-${g.id}').classList.toggle('open')"><span><span class="cat">${g.cat}</span><br>${esc(g.q)}</span><span class="chev">▸</span></div>
+      <div class="ga">${esc(g.a)}${(g.ex||[]).map(e=>`<div class="ex"><span class="de">${esc(e[0])}</span><span class="en">${esc(e[1])}</span></div>`).join('')}</div>
+    </div>`).join('');
+}
+
+// ======== UI ========
+function updateStat(){
+  const total=Object.keys(memory.vocab).length;
+  const sh=shakyWords().length+shakyGram().length;
+  document.getElementById('stat').innerHTML=`<b>${total}</b> words met<br>${sh} to review`;
+  const badge=document.getElementById('revBadge');
+  if(sh>0){badge.style.display='inline-block';badge.textContent=sh;}else badge.style.display='none';
+}
+function showTab(t){
+  document.getElementById('tab-chat').classList.toggle('active',t==='chat');
+  document.getElementById('tab-review').classList.toggle('active',t==='review');
+  document.getElementById('tab-gram').classList.toggle('active',t==='gram');
+  document.getElementById('thread').style.display=t==='chat'?'flex':'none';
+  document.getElementById('composer').style.display=t==='chat'?'flex':'none';
+  document.getElementById('review').classList.toggle('show',t==='review');
+  document.getElementById('gram').classList.toggle('show',t==='gram');
+  if(t==='review')renderReview();
+  if(t==='gram')renderGram();
+}
+function setLang(l){typingLang=l;document.getElementById('lang-de').classList.toggle('active',l==='de');document.getElementById('lang-en').classList.toggle('active',l==='en');document.getElementById('input').placeholder=l==='de'?"Type German…":"Type English — sent as German for them to decode.";}
+function renderStarters(){
+  const el=document.getElementById('starters');el.innerHTML='';
+  const nw=document.createElement('button');nw.textContent='+ new word';nw.style.borderColor='var(--new)';nw.style.color='var(--new)';nw.onclick=injectNewWord;el.appendChild(nw);
+  STARTERS.forEach(s=>{const b=document.createElement('button');b.textContent=s.en;b.onclick=()=>{setLang('en');const i=document.getElementById('input');i.value=s.en;i.focus();};el.appendChild(b);});
+}
+
+async function setWho(who){
+  me=who; localStorage.setItem("dt_me", who);
+  document.getElementById('sub').textContent='with '+other();
+  document.getElementById('meChip').textContent=me+' ⇄';
+  document.getElementById('picker').style.display='none';
+  document.getElementById('app').style.visibility='visible';
+  renderStarters();
+  showConn("Connecting…");
+  try{
+    await loadMemory();
+    await loadMessages();
+    subscribeRealtime();
+    hideConn();
+  }catch(e){ showConn("Connection problem — check your network", true); }
+  updateStat();
+}
+async function switchWho(){ await setWho(other()); const r=document.getElementById('review'); if(r.classList.contains('show'))renderReview(); }
+document.querySelectorAll('.who-btn').forEach(b=>b.onclick=()=>setWho(b.dataset.who));
+
+const input=document.getElementById('input');
+input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,120)+'px';});
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSend();}});
+
+// auto-resume if they picked before
+if(me){ setWho(me); }
+</script>
+</body>
+</html>
